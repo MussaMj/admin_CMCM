@@ -33,7 +33,6 @@ const PotholeMap: React.FC<PotholeMapProps> = ({
                     <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                         <option value="all">Status: Todos</option>
                         <option value="reported">Pendente</option>
-                        <option value="analyzing">Em Análise</option>
                         <option value="in_repair">Em Reparo</option>
                         <option value="repaired">Resolvido</option>
                     </select>
@@ -79,8 +78,7 @@ const PotholeMap: React.FC<PotholeMapProps> = ({
                                 <p className="popup-desc">{p.description}</p>
                                 <div className={`status-tag ${p.status}`}>
                                     {p.status === 'repaired' ? 'RESOLVIDO' :
-                                        p.status === 'in_repair' ? 'EM REPARO' :
-                                            p.status === 'analyzing' ? 'EM ANÁLISE' : 'PENDENTE'}
+                                        p.status === 'in_repair' ? 'EM REPARO' : 'PENDENTE'}
                                 </div>
                                 {p.assignedTechnician && (
                                     <p className="popup-tech">Técnico: {p.assignedTechnician}</p>

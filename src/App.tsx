@@ -1,21 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-    collection,
-    query,
-    orderBy,
-    onSnapshot,
-    updateDoc,
-    doc,
-    Timestamp,
-    addDoc
-} from 'firebase/firestore';
-import { db } from './firebase';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from './utils/supabase';
 import './App.css';
 
-// Types
-import { Pothole } from './types';
+import { Pothole, ReportRow, mapReportRow } from './types';
 
-// Components
 import Sidebar from './components/Sidebar';
 import DashboardStats from './components/DashboardStats';
 import PotholeTable from './components/PotholeTable';
@@ -33,137 +21,128 @@ const App: React.FC = () => {
     const [selectedPothole, setSelectedPothole] = useState<Pothole | null>(null);
     const [myTasksOnly, setMyTasksOnly] = useState(false);
 
-    // Simulated "Current User" as "Admin Central" for worker experience
     const CURRENT_USER_NAME = "Admin Central";
 
-    useEffect(() => {
-        const q = query(collection(db, 'potholes'), orderBy('createdAt', 'desc'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data: Pothole[] = [];
-            snapshot.forEach((doc) => {
-                data.push({ id: doc.id, ...doc.data() } as Pothole);
-            });
-            setPotholes(data);
-            setLoading(false);
-        });
+    const fetchReports = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('reports')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-        return () => unsubscribe();
+        if (error) {
+            console.error('Error loading reports:', error);
+            setLoading(false);
+            return;
+        }
+
+        setPotholes((data as ReportRow[]).map(mapReportRow));
+        setLoading(false);
     }, []);
 
-    const createNotification = async (userId: string, potholeId: string, address: string) => {
-        try {
-            await addDoc(collection(db, 'notifications'), {
-                userId,
-                potholeId,
-                title: "Problema Resolvido!",
-                message: `O problema reportado em ${address || 'sua localização'} foi marcado como concluído. Obrigado por ajudar!`,
-                type: 'fix_alert',
-                status: 'unread',
-                createdAt: Timestamp.now()
-            });
-        } catch (error) {
-            console.error("Error creating notification:", error);
-        }
-    };
+    useEffect(() => {
+        fetchReports();
 
-    const handleUpdateStatus = async (id: string, newStatus: string, notes?: string, technicianName?: string) => {
+        const channel = supabase
+            .channel('reports-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'reports' },
+                () => {
+                    fetchReports();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchReports]);
+
+    const handleUpdateStatus = async (
+        id: string,
+        newStatus: string,
+        notes?: string,
+        technicianName?: string
+    ) => {
         try {
             const pothole = potholes.find(p => p.id === id);
             if (!pothole) return;
 
-            const updateData: any = {
+            const updateData: Record<string, unknown> = {
                 status: newStatus,
-                updatedAt: Timestamp.now()
+                updated_at: new Date().toISOString(),
             };
 
             if (technicianName) {
-                updateData.assignedTechnician = technicianName;
+                updateData.assigned_technician = technicianName;
             } else if (newStatus === 'in_repair' && !pothole.assignedTechnician) {
-                updateData.assignedTechnician = CURRENT_USER_NAME;
+                updateData.assigned_technician = CURRENT_USER_NAME;
+            }
+
+            const { error } = await supabase
+                .from('reports')
+                .update(updateData)
+                .eq('id', id);
+
+            if (error) {
+                console.error('Error updating status:', error);
+                return;
             }
 
             if (notes) {
-                updateData.repairNotes = notes;
-            }
-
-            // Create Activity Log Entry
-            const newLogEntry = {
-                id: Math.random().toString(36).substr(2, 9),
-                userId: "admin_central",
-                userName: CURRENT_USER_NAME,
-                action: technicianName ? `Atribuiu para ${technicianName}` : `Mudou status para ${newStatus}`,
-                timestamp: Timestamp.now(),
-                notes: notes,
-                newStatus: newStatus
-            };
-
-            updateData.activityLog = pothole.activityLog ? [...pothole.activityLog, newLogEntry] : [newLogEntry];
-
-            await updateDoc(doc(db, 'potholes', id), updateData);
-
-            // Notify users if status is 'repaired'
-            if (newStatus === 'repaired' && pothole.reporterUids) {
-                for (const uid of pothole.reporterUids) {
-                    await createNotification(uid, id, pothole.address || '');
-                }
-                console.log(`Notifications sent for pothole ${id}`);
+                console.info(`Repair notes for ${id}:`, notes);
             }
         } catch (error) {
-            console.error("Error updating status:", error);
+            console.error('Error updating status:', error);
         }
     };
 
     const handleSeedDatabase = async () => {
         if (!window.confirm("Deseja carregar dados de teste no sistema?")) return;
         setLoading(true);
-        const mockPotholes = [
+
+        const mockReports = [
             {
                 address: "Av. Eduardo Mondlane, Maputo",
-                neighborhood: "Polana Cimento",
                 description: "Buraco profundo no meio da faixa de rodagem.",
                 status: "reported",
                 severity: "high",
-                reportCount: 3,
-                imageUrl: "https://images.unsplash.com/photo-1541698444083-023c97d3f4b6",
-                location: { latitude: -25.9650, longitude: 32.5830 },
-                reporterUids: ["user_1", "user_2", "user_3"],
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                activityLog: []
+                report_count: 3,
+                image_url: "https://images.unsplash.com/photo-1541698444083-023c97d3f4b6",
+                latitude: -25.9650,
+                longitude: 32.5830,
+                reporter_uids: ["user_1", "user_2", "user_3"],
             },
             {
                 address: "Rua da Resistência, Maputo",
-                neighborhood: "Maxaquene",
                 description: "Vários buracos pequenos dificultando o trânsito.",
                 status: "reported",
                 severity: "medium",
-                reportCount: 1,
-                imageUrl: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7",
-                location: { latitude: -25.9600, longitude: 32.5900 },
-                reporterUids: ["user_4"],
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-                activityLog: []
-            }
+                report_count: 1,
+                image_url: "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7",
+                latitude: -25.9600,
+                longitude: 32.5900,
+                reporter_uids: ["user_4"],
+            },
         ];
 
-        try {
-            for (const p of mockPotholes) {
-                await addDoc(collection(db, 'potholes'), p);
-            }
-            alert("Dados carregados com sucesso!");
-        } catch (error) {
-            console.error("Error seeding database:", error);
-        } finally {
-            setLoading(false);
+        const { error } = await supabase.from('reports').insert(mockReports);
+
+        if (error) {
+            console.error('Error seeding database:', error);
+            alert('Erro ao carregar dados.');
+        } else {
+            alert('Dados carregados com sucesso!');
+            await fetchReports();
         }
+
+        setLoading(false);
     };
 
     const stats = useMemo(() => {
-        const resolved = potholes.filter(p => p.status === 'repaired' || p.status === 'verified').length;
-        const pending = potholes.filter(p => p.status === 'reported' || p.status === 'analyzing').length;
+        const resolved = potholes.filter(p => p.status === 'repaired').length;
+        const pending = potholes.filter(p => p.status === 'reported').length;
 
-        // Group by neighborhood
         const byNeighborhood: Record<string, number> = {};
         potholes.forEach(p => {
             const n = p.neighborhood || 'Outros';
@@ -175,7 +154,7 @@ const App: React.FC = () => {
             resolved,
             pending,
             critical: potholes.filter(p => p.severity === 'high' && p.status !== 'repaired').length,
-            neighborhoods: Object.entries(byNeighborhood).map(([name, count]) => ({ name, count }))
+            neighborhoods: Object.entries(byNeighborhood).map(([name, count]) => ({ name, count })),
         };
     }, [potholes]);
 
@@ -191,7 +170,7 @@ const App: React.FC = () => {
             let matchesDate = true;
             if (filterDate !== 'all') {
                 const now = new Date();
-                const createdAt = p.createdAt.toDate();
+                const createdAt = p.createdAt;
                 if (filterDate === 'today') {
                     matchesDate = createdAt.toDateString() === now.toDateString();
                 } else if (filterDate === 'week') {

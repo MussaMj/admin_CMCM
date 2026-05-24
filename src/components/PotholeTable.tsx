@@ -62,7 +62,6 @@ const PotholeTable: React.FC<PotholeTableProps> = ({
                         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                             <option value="all">Todos Estados</option>
                             <option value="reported">Pendente</option>
-                            <option value="analyzing">Em Análise</option>
                             <option value="in_repair">Em Reparo</option>
                             <option value="repaired">Resolvido</option>
                         </select>
@@ -123,7 +122,7 @@ const PotholeTable: React.FC<PotholeTableProps> = ({
                                     </td>
                                     <td>
                                         <span className={`status-badge ${p.status}`}>
-                                            {p.status === 'repaired' ? 'Resolvido' : p.status === 'in_repair' ? 'Em Reparo' : p.status === 'analyzing' ? 'Em Análise' : 'Pendente'}
+                                            {p.status === 'repaired' ? 'Resolvido' : p.status === 'in_repair' ? 'Em Reparo' : 'Pendente'}
                                         </span>
                                     </td>
                                     <td>
