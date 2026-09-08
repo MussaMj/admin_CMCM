@@ -163,7 +163,7 @@ const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpd
                                     <button
                                         key={key}
                                         className={`status-action-btn ${selectedStatus === key ? 'active' : ''}`}
-                                        onClick={() => setSelectedStatus(key)}
+                                        onClick={() => setSelectedStatus(key as 'reported' | 'in_repair' | 'repaired')}
                                         disabled={isSubmitting}
                                         style={{
                                             borderColor: selectedStatus === key ? config.color : 'var(--border-color)',
