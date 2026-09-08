@@ -37,6 +37,7 @@ const PotholeTable: React.FC<PotholeTableProps> = ({
     myTasksOnly,
     setMyTasksOnly
 }) => {
+
     return (
         <section className="table-section">
             <div className="table-header">
@@ -117,7 +118,7 @@ const PotholeTable: React.FC<PotholeTableProps> = ({
                                     </td>
                                     <td>
                                         <div className="tech-assigned">
-                                            {p.assignedTechnician || 'Ninguém'}
+                                            {p.assignedTechnician || 'Não atribuído'}
                                         </div>
                                     </td>
                                     <td>

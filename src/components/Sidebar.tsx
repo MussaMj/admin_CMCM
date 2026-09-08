@@ -1,9 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, Database, Map as MapIcon, Settings } from 'lucide-react';
+import { LayoutDashboard, Database, Map as MapIcon, Settings, LogOut, User } from 'lucide-react';
+import { supabase } from '../utils/supabase';
 
 interface SidebarProps {
-    activeTab: 'dashboard' | 'map' | 'potholes';
-    setActiveTab: (t: 'dashboard' | 'map' | 'potholes') => void;
+    activeTab: 'dashboard' | 'map' | 'potholes' | 'profile';
+    setActiveTab: (t: 'dashboard' | 'map' | 'potholes' | 'profile') => void;
     onSeedData: () => void;
 }
 
@@ -33,6 +34,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onSeedData }
                 >
                     <MapIcon size={20} /> Mapa do Terreno
                 </button>
+                <button
+                    className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('profile')}
+                >
+                    <User size={20} /> Meu Perfil
+                </button>
 
                 <div className="sidebar-footer">
                     <button
@@ -41,6 +48,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onSeedData }
                         title="Ferramenta de Suporte"
                     >
                         <Settings size={18} /> Manutenção do Sistema
+                    </button>
+                    <button
+                        className="nav-item utility"
+                        onClick={() => supabase.auth.signOut()}
+                        style={{ color: 'var(--accent-danger)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                    >
+                        <LogOut size={18} /> Sair
                     </button>
                 </div>
             </nav>

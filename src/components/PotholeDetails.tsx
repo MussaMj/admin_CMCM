@@ -26,21 +26,18 @@ const severityConfig = {
 const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpdateStatus }) => {
     const [notes, setNotes] = useState('');
     const [selectedTech, setSelectedTech] = useState(pothole.assignedTechnician || '');
+    const [selectedStatus, setSelectedStatus] = useState(pothole.status);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [imgError, setImgError] = useState(false);
 
     const sc = statusConfig[pothole.status] || statusConfig.reported;
     const sev = severityConfig[pothole.severity] || severityConfig.low;
 
-    const handleUpdate = async (newStatus: string) => {
+    const handleSave = async () => {
         setIsSubmitting(true);
-        await onUpdateStatus(pothole.id, newStatus, notes, selectedTech);
+        await onUpdateStatus(pothole.id, selectedStatus, notes, selectedTech);
         setIsSubmitting(false);
-    };
-
-    const handleAssignTech = async (tech: string) => {
-        setSelectedTech(tech);
-        await onUpdateStatus(pothole.id, pothole.status, notes, tech);
+        onClose();
     };
 
     const mapsUrl = pothole.location
@@ -64,14 +61,16 @@ const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpd
 
                 <div className="detail-body">
                     <div className="detail-left-col">
-                        <div className="detail-img-container">
+                        <div className="detail-img-container" style={{ position: 'relative' }}>
                             {!imgError && pothole.imageUrl ? (
-                                <img
-                                    src={pothole.imageUrl}
-                                    alt="Evidência fotográfica"
-                                    className="detail-img"
-                                    onError={() => setImgError(true)}
-                                />
+                                <>
+                                    <img
+                                        src={pothole.imageUrl}
+                                        alt="Evidência fotográfica"
+                                        className="detail-img"
+                                        onError={() => setImgError(true)}
+                                    />
+                                </>
                             ) : (
                                 <div className="detail-img-placeholder">
                                     <Camera size={40} color="#475569" />
@@ -132,7 +131,7 @@ const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpd
                             <select
                                 className="detail-select"
                                 value={selectedTech}
-                                onChange={(e) => handleAssignTech(e.target.value)}
+                                onChange={(e) => setSelectedTech(e.target.value)}
                             >
                                 <option value="">Não atribuído</option>
                                 {TECHNICIANS.map(t => (
@@ -163,12 +162,12 @@ const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpd
                                 {Object.entries(statusConfig).map(([key, config]) => (
                                     <button
                                         key={key}
-                                        className={`status-action-btn ${pothole.status === key ? 'active' : ''}`}
-                                        onClick={() => handleUpdate(key)}
+                                        className={`status-action-btn ${selectedStatus === key ? 'active' : ''}`}
+                                        onClick={() => setSelectedStatus(key)}
                                         disabled={isSubmitting}
                                         style={{
-                                            borderColor: pothole.status === key ? config.color : 'var(--border-color)',
-                                            color: pothole.status === key ? config.color : 'var(--text-secondary)'
+                                            borderColor: selectedStatus === key ? config.color : 'var(--border-color)',
+                                            color: selectedStatus === key ? config.color : 'var(--text-secondary)'
                                         }}
                                     >
                                         {config.icon}
@@ -199,7 +198,27 @@ const PotholeDetails: React.FC<PotholeDetailsProps> = ({ pothole, onClose, onUpd
                         </div>
 
                         <div className="detail-footer-actions">
-                            <button className="detail-back-btn" onClick={onClose}>Fechar</button>
+                            <button className="detail-back-btn" onClick={onClose} disabled={isSubmitting}>Cancelar</button>
+                            <button 
+                                className="detail-save-btn" 
+                                onClick={handleSave} 
+                                disabled={isSubmitting}
+                                style={{
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    padding: '0.75rem 1.5rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    fontWeight: '600',
+                                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    opacity: isSubmitting ? 0.7 : 1
+                                }}
+                            >
+                                {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                            </button>
                         </div>
                     </div>
                 </div>

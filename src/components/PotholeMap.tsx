@@ -61,8 +61,9 @@ const PotholeMap: React.FC<PotholeMapProps> = ({
                 style={{ height: '600px', width: '100%', borderRadius: '16px', zIndex: 1 }}
             >
                 <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                    attribution='&copy; Google Maps'
+                    maxZoom={20}
                 />
                 {potholes.filter(p => p.location).map(p => (
                     <Marker

@@ -146,6 +146,17 @@ header {
     padding: 0.4rem 1rem 0.4rem 0.4rem;
     border-radius: 50px;
     border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.user-profile.clickable {
+    cursor: pointer;
+}
+
+.user-profile.clickable:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--accent-primary);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
 }
 
 .user-avatar {
